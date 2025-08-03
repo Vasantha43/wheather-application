@@ -1,0 +1,114 @@
+<html>
+<head>
+  <title>Live Weather App</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .weather-container {
+      background-color: rgba(28, 23, 23, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(147, 121, 121, 0.3);
+      padding: 30px;
+      width: 320px;
+      color: #140d0d;
+      text-align: center;
+    }
+
+    input {
+      width: 80%;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #fff;
+      color: #333;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+
+    .icon {
+      font-size: 48px;
+    }
+
+    .temp {
+      font-size: 36px;
+      font-weight: bold;
+    }
+
+    .description {
+      font-size: 20px;
+      margin: 10px 0;
+      text-transform: capitalize;
+    }
+
+    .details {
+      font-size: 14px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="weather-container">
+    <input type="text" id="cityInput" placeholder="Enter city name" />
+    <button onclick="getWeather()">Get Weather</button>
+    <div id="weatherInfo">
+      <div class="icon">☀️</div>
+      <div class="temp">--°C</div>
+      <div class="description">Waiting...</div>
+      <div class="details">Humidity: -- | Wind: --</div>
+    </div>
+  </div>
+
+  <script>
+    async function getWeather() {
+      const city = document.getElementById("cityInput").value.trim();
+      const apiKey = "your_actual_api_key"; // 🔁 Replace this with your real API key
+      if (city === "") return;
+
+      const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.cod === 200) {
+          const icon = data.weather[0].main === "Clouds" ? "☁️" :
+                       data.weather[0].main === "Rain" ? "🌧️" :
+                       data.weather[0].main === "Clear" ? "☀️" :
+                       data.weather[0].main === "Snow" ? "❄️" : "🌤️";
+
+          document.querySelector(".icon").textContent = icon;
+          document.querySelector(".temp").textContent = `${data.main.temp}°C`;
+          document.querySelector(".description").textContent = data.weather[0].description;
+          document.querySelector(".details").textContent =
+            `Humidity: ${data.main.humidity}% | Wind: ${data.wind.speed} m/s`;
+        } else {
+          showError("City not found!");
+        }
+      } catch (error) {
+        showError("Failed to fetch weather data.");
+      }
+    }
+
+    function showError(message) {
+      document.querySelector(".icon").textContent = "❓";
+      document.querySelector(".temp").textContent = "--°C";
+      document.querySelector(".description").textContent = message;
+      document.querySelector(".details").textContent = "";
+    }
+  </script>
+</body>
+</html>
