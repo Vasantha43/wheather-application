@@ -1,6 +1,0 @@
-<div class="main__container">
-  @for (city of cities | async; track city) {
-    <app-weather-card [city]="city.name"></app-weather-card>
-  }
-  <app-add-card></app-add-card>
-</div>
