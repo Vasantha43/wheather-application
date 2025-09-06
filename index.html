@@ -1,96 +1,145 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Weather App</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weather by Location (No API Key)</title>
   <style>
-    * {
-      box-sizing: border-box;
-      font-family: 'Segoe UI', sans-serif;
-    }
-    body {
-      background: linear-gradient(to right, #73c9e0, #d3dcdc);
-      color: rgb(7, 7, 7);
-      text-align: center;
-      padding: 50px 20px;
-    }
-    .container {
-      max-width: 400px;
-      margin: auto;
-      background-color: rgba(15, 15, 15, 0.1);
-      border-radius: 15px;
-      padding: 30px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    }
-    input {
-      width: 80%;
-      padding: 10px;
-      margin-top: 10px;
-      font-size: 1em;
-      border: none;
-      border-radius: 10px;
-    }
-    button {
-      padding: 10px 20px;
-      margin-top: 15px;
-      font-size: 1em;
-      border: none;
-      border-radius: 10px;
-      background-color: #ffffff;
-      color: #18191b;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-    button:hover {
-      background-color: #f4efef;
-    }
-    .weather {
-      margin-top: 30px;
-      font-size: 1.2em;
-    }
+    :root{--bg:#0f172a;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8;color-scheme:dark}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{background:radial-gradient(1200px 600px at 10% 10%, rgba(6,182,212,0.08), transparent), var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:22px;max-width:760px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.6);color:white}
+    h1{margin:0 0 8px;font-size:20px}
+    p.lead{margin:0 0 16px;color:var(--muted)}
+    .controls{display:flex;gap:8px}
+    input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;font-size:15px}
+    button{padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:#042024;font-weight:600;cursor:pointer}
+    .result{margin-top:18px;padding:14px;border-radius:10px;background:rgba(255,255,255,0.02);display:flex;gap:14px;align-items:center}
+    .icon{font-size:40px}
+    .meta{line-height:1.25}
+    .muted{color:var(--muted);font-size:13px}
+    .small{font-size:13px}
+    .error{color:#ffb4b4;background:rgba(255,180,180,0.03);padding:10px;border-radius:8px;margin-top:12px}
+    footer{margin-top:14px;color:var(--muted);font-size:13px}
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🌍 Weather Finder</h1>
-    <input type="text" id="cityInput" placeholder="Enter city (e.g. London)" />
-    <button onclick="getWeather()">Get Weather</button>
-    <div class="weather" id="weatherInfo"></div>
+  <div class="card">
+    <h1>Weather by Location (No API Key)</h1>
+    <p class="lead">Type a <strong>city</strong> or <strong>country</strong> name. The app uses Open-Meteo's geocoding service to find coordinates and then shows the current weather.</p>
+
+    <div class="controls">
+      <input id="locationInput" placeholder="e.g. London, Japan, Brazil" aria-label="Location name" />
+      <button id="getBtn">Get Weather</button>
+    </div>
+
+    <div id="output"></div>
+
+    <footer>Data sources: <span class="muted">open-meteo.com</span> (geocoding + weather, no API key).</footer>
   </div>
 
-  <script>
-    async function getWeather() {
-      const city = document.getElementById("cityInput").value.trim();
-      const apiKey = "YOUR_API_KEY_HERE"; // Replace with your OpenWeatherMap API key
+<script>
+const $ = id => document.getElementById(id);
+const getBtn = $('getBtn');
+const locationInput = $('locationInput');
+const output = $('output');
 
-      if (!city) {
-        alert("Please enter a city name.");
-        return;
-      }
+const weatherCodeMap = {
+  0: 'Clear sky',
+  1: 'Mainly clear',
+  2: 'Partly cloudy',
+  3: 'Overcast',
+  45: 'Fog',
+  48: 'Depositing rime fog',
+  51: 'Light drizzle',
+  53: 'Moderate drizzle',
+  55: 'Dense drizzle',
+  56: 'Light freezing drizzle',
+  57: 'Dense freezing drizzle',
+  61: 'Slight rain',
+  63: 'Moderate rain',
+  65: 'Heavy rain',
+  66: 'Light freezing rain',
+  67: 'Heavy freezing rain',
+  71: 'Slight snow fall',
+  73: 'Moderate snow fall',
+  75: 'Heavy snow fall',
+  77: 'Snow grains',
+  80: 'Slight rain showers',
+  81: 'Moderate rain showers',
+  82: 'Violent rain showers',
+  85: 'Slight snow showers',
+  86: 'Heavy snow showers',
+  95: 'Thunderstorm',
+  96: 'Thunderstorm with slight hail',
+  99: 'Thunderstorm with heavy hail'
+};
 
-      try {
-        const response = await fetch(
-          `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`
-        );
+function showError(msg){
+  output.innerHTML = `<div class="error">${escapeHtml(msg)}</div>`;
+}
 
-        if (!response.ok) {
-          throw new Error("City not found");
-        }
+function escapeHtml(s){
+  return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+}
 
-        const data = await response.json();
-        const weatherHTML = `
-          <h2>${data.name}, ${data.sys.country}</h2>
-          <p>🌡️ Temperature: ${data.main.temp}°C</p>
-          <p>☁️ Weather: ${data.weather[0].description}</p>
-          <p>💨 Wind Speed: ${data.wind.speed} m/s</p>
-          <p>💧 Humidity: ${data.main.humidity}%</p>
-        `;
-        document.getElementById("weatherInfo").innerHTML = weatherHTML;
-      } catch (error) {
-        document.getElementById("weatherInfo").innerHTML = `<p>❌ ${error.message}</p>`;
-      }
-    }
-  </script>
+async function geocodeLocation(name){
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('Location not found (geocoding failed).');
+  const data = await res.json();
+  if(!data.results || !data.results.length) throw new Error('No matching location found.');
+  return data.results[0];
+}
+
+async function getWeatherForCoords(lat, lon){
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current_weather=true`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('Weather request failed.');
+  return res.json();
+}
+
+function renderResult({place, coords, weather}){
+  const desc = weatherCodeMap[weather.weathercode] || 'Unknown';
+  const tC = weather.temperature;
+  const tF = (tC * 9/5 + 32).toFixed(1);
+  const wind = weather.windspeed;
+  const time = weather.time;
+  output.innerHTML = `
+    <div class="result">
+      <div class="icon">☁️</div>
+      <div class="meta">
+        <div style="font-weight:700;font-size:16px">${escapeHtml(place)}</div>
+        <div class="muted small">Coordinates: ${coords.lat.toFixed(3)}, ${coords.lon.toFixed(3)}</div>
+        <div style="margin-top:8px">${escapeHtml(desc)} — <strong>${tC.toFixed(1)}°C</strong> / ${tF}°F</div>
+        <div class="muted small">Wind: ${wind} m/s · As of: ${escapeHtml(time)}</div>
+      </div>
+    </div>
+  `;
+}
+
+getBtn.addEventListener('click', async ()=>{
+  const name = locationInput.value.trim();
+  if(!name) return showError('Please enter a location name.');
+  output.innerHTML = '<div class="muted small">Finding location and fetching weather…</div>';
+
+  try{
+    const loc = await geocodeLocation(name);
+    const lat = loc.latitude;
+    const lon = loc.longitude;
+    const placeLabel = `${loc.name}, ${loc.country}`;
+
+    const weatherResp = await getWeatherForCoords(lat, lon);
+    if(!weatherResp.current_weather) throw new Error('No current weather available from Open-Meteo.');
+    renderResult({place: placeLabel, coords:{lat,lon}, weather: weatherResp.current_weather});
+
+  }catch(err){
+    showError(err.message || String(err));
+  }
+});
+
+locationInput.addEventListener('keydown', e => { if(e.key === 'Enter') getBtn.click(); });
+
+</script>
 </body>
 </html>
